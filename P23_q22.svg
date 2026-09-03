@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="412" viewBox="0 0 900 412">
+  <rect x="0" y="0" width="900" height="412" fill="#ffffff"/>
+  <rect x="2" y="2" width="896" height="408" fill="none" stroke="#d9dbe8" stroke-width="2"/>
+  <text x="36" y="61" font-family="Helvetica, Arial, sans-serif" font-size="25" font-weight="700" fill="#4a3fa8">Q22  [3 marks]</text>
+  <text x="36" y="106" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="400" fill="#1a1a2e">A bicycle rider A commences her ride along a straight road, riding</text>
+  <text x="36" y="142" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="400" fill="#1a1a2e">at a constant 9.0 m/s the whole way.</text>
+  <text x="36" y="188" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="400" fill="#1a1a2e">A second rider, B, commences her ride from the same start point as</text>
+  <text x="36" y="224" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="400" fill="#1a1a2e">A, but 20.0 s later than A.</text>
+  <text x="36" y="270" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="400" fill="#1a1a2e">Starting from rest, what constant acceleration must rider B have</text>
+  <text x="36" y="306" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="400" fill="#1a1a2e">in order to catch up to rider A exactly 900 m from the start</text>
+  <text x="36" y="342" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="400" fill="#1a1a2e">position? Set out your working clearly.</text>
+  
+</svg>
