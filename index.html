@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Dashboard — Preliminary Physics Quiz</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#f4f5fb; --card:#fff; --ink:#1c2340; --ink2:#68708f; --accent:#5b4bd4; --good:#0aa876; --bad:#e34d68; --gold:#e0a72e; --line:#e2e5f0;
+      --m1:#3b82f6; --m2:#14b8a6; --m3:#f59e0b; --m4:#22c55e; --ws:#a855f7;}
+*{box-sizing:border-box; margin:0; padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--ink)}
+.wrap{max-width:1080px; margin:0 auto; padding:20px}
+h1{font-size:1.4rem} h2{font-size:1.05rem; margin-bottom:12px}
+.muted{color:var(--ink2); font-size:.88rem}
+.card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(20,30,80,.06)}
+.btn{border:none; border-radius:10px; padding:10px 18px; font-size:.92rem; font-weight:600; cursor:pointer; background:#e9ebf7; color:var(--ink)}
+.btn.primary{background:var(--accent); color:#fff}
+.btn.danger{background:#fdeaee; color:var(--bad)}
+.btn.small{padding:6px 10px; font-size:.8rem}
+input,textarea,select{border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.95rem; width:100%; font-family:inherit}
+table{width:100%; border-collapse:collapse; font-size:.9rem}
+th,td{padding:9px 8px; text-align:left; border-bottom:1px solid var(--line)}
+th{color:var(--ink2); font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; cursor:pointer}
+.statgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px}
+.stat{background:#f6f7fd; border-radius:12px; padding:14px; text-align:center}
+.stat .v{font-size:1.5rem; font-weight:800} .stat .l{font-size:.72rem; color:var(--ink2); text-transform:uppercase}
+.heat{display:inline-block; min-width:58px; text-align:center; padding:4px 6px; border-radius:8px; font-weight:600; font-size:.82rem}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.pill{display:inline-block; border-radius:99px; padding:2px 10px; font-size:.75rem; font-weight:700}
+.banner{background:#fff7e0; color:#8a6d00; border:1px solid #f0dfa0; padding:10px 14px; border-radius:10px; font-size:.85rem; margin-bottom:14px; display:none}
+.tabs{display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap}
+.tab{padding:9px 18px; border-radius:10px; cursor:pointer; font-weight:600; font-size:.9rem; background:#e9ebf7}
+.tab.on{background:var(--accent); color:#fff}
+.pane{display:none} .pane.on{display:block}
+.tbar{height:14px; background:#eef0f8; border-radius:99px; overflow:hidden; flex:1}
+.tbar>div{height:100%; border-radius:99px}
+.topicrow{display:flex; align-items:center; gap:10px; margin:7px 0}
+.answerbox{background:#f8f9fe; border:1px solid var(--line); border-radius:10px; padding:14px; font-size:.93rem; line-height:1.6; white-space:pre-wrap; max-height:340px; overflow-y:auto}
+.markitem{border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; background:#fff}
+.markitem.done{background:#fbfcff}
+.markbtns{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+.markbtns .btn{min-width:44px}
+.markbtns .btn.sel{background:var(--accent); color:#fff}
+.copybar{display:flex; gap:14px; justify-content:space-between; align-items:center; flex-wrap:wrap;
+         background:#f2f0fd; border:1px solid #ddd8fa; border-radius:12px; padding:14px; margin-bottom:16px; font-size:.88rem}
+.aibox{background:#f2f0fd; border:1px solid #ddd8fa; border-radius:10px; padding:12px; margin-top:12px; font-size:.88rem}
+.aibox .ai-h{font-weight:800; color:var(--accent); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px}
+.qthumb{max-width:100%; border-radius:8px; border:1px solid var(--line); margin-top:8px}
+.spread{display:inline-flex; gap:4px; align-items:center}
+.spread span{background:#eef0f8; border-radius:6px; padding:1px 7px; font-size:.78rem; font-weight:700}
+.badgegrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:4px}
+.badge{background:#f6f7fd; border:1px solid var(--line); border-radius:12px; padding:12px 8px; text-align:center}
+.badge .be{font-size:1.7rem; line-height:1.2}
+.badge .bn{font-size:.78rem; font-weight:700; margin-top:4px}
+.badge .bd{font-size:.68rem; color:var(--ink2); margin-top:3px; line-height:1.3}
+dialog{border:none; border-radius:14px; padding:24px; max-width:640px; width:92%; box-shadow:0 10px 40px rgba(0,0,0,.2)}
+dialog::backdrop{background:rgba(20,25,60,.4)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="localBanner" class="banner">⚠️ Device-only mode: you're seeing results saved in <b>this browser</b> only. Set up Firebase (SETUP.md) to see every student's results.</div>
+
+  <div id="scr-login" style="max-width:380px; margin:80px auto">
+    <div class="card" style="text-align:center">
+      <div style="font-size:2rem">🔐</div>
+      <h1 style="margin:8px 0">Teacher Dashboard</h1>
+      <p class="muted" style="margin-bottom:14px">Preliminary Physics Quiz Arena</p>
+      <input type="password" id="pw" placeholder="Password" style="margin-bottom:10px">
+      <button class="btn primary" style="width:100%" onclick="login()">Enter</button>
+      <p id="pwErr" style="color:var(--bad); display:none; margin-top:8px">Wrong password</p>
+    </div>
+  </div>
+
+  <div id="scr-dash" style="display:none">
+    <div class="row" style="justify-content:space-between; margin-bottom:16px">
+      <h1>📊 Class Dashboard</h1>
+      <div class="row">
+        <a id="studentLink" class="btn" style="text-decoration:none; display:none" target="_blank">Student site ↗</a>
+        <button class="btn" onclick="load()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab on" data-p="overview">Overview</div>
+      <div class="tab" data-p="students">Students</div>
+      <div class="tab" data-p="topics">Topic analysis</div>
+      <div class="tab" data-p="marking">Marking <span id="markCount" class="pill" style="background:#fdeaee; color:var(--bad); display:none"></span></div>
+      <div class="tab" data-p="roster">Class list</div>
+    </div>
+
+    <div class="pane on" id="pane-overview">
+      <div class="card"><div class="statgrid" id="classStats"></div></div>
+      <div class="card"><h2>Class accuracy by topic</h2><div id="classTopics"></div></div>
+      <div class="card"><h2>Weakest syllabus areas (class-wide, min 5 attempts)</h2><div id="classWeak"></div></div>
+      <div class="card"><h2>Recent activity</h2><div id="recent"></div></div>
+    </div>
+
+    <div class="pane" id="pane-students">
+      <div class="card">
+        <h2>Student results <span class="muted">(click a row for detail)</span></h2>
+        <div class="row" id="studentFilter" style="margin-bottom:12px"></div>
+        <div id="studentTable"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-marking">
+      <div class="card">
+        <h2>Marking queue</h2>
+        <p class="muted" style="margin-bottom:12px" id="markingIntro"></p>
+        <div class="row" id="markingFilter" style="margin-bottom:10px"></div>
+        <div class="copybar">
+          <div>
+            <b>📋 Mark with Cowork</b>
+            <div class="muted" style="margin-top:2px">Copy an answer, paste it into Cowork, and it comes back with a mark and feedback against the NESA guidelines. Then enter the mark below and approve.</div>
+          </div>
+          <div class="row" style="flex-shrink:0">
+            <button class="btn small" onclick="copyAllPending()">Copy all in this filter</button>
+            <span class="muted" id="copyAllStatus"></span>
+          </div>
+        </div>
+        <div id="markingQueue"></div>
+      </div>
+      <div class="card">
+        <h2>Already marked</h2>
+        <p class="muted" style="margin-bottom:12px">Peer marks are shown where students have marked this answer. A wide spread means the criteria are worth revisiting in class.</p>
+        <div id="markedList"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-topics">
+      <div class="card">
+        <h2>Accuracy heatmap — student × topic</h2>
+        <p class="muted" style="margin-bottom:10px">Green ≥ 75% · amber 50–74% · red &lt; 50% · grey = not attempted</p>
+        <div id="heatmap" style="overflow-x:auto"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-roster">
+      <div class="card">
+        <h2>Add students</h2>
+        <p class="muted" style="margin-bottom:8px">One name per line. Students set their own PIN on first login.</p>
+        <textarea id="newNames" rows="5" placeholder="Jane Citizen&#10;Sam Smith"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" onclick="addNames()">Add to class list</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Current class list</h2>
+        <p class="muted" style="margin-bottom:10px">Students appear here once added. They set their own PIN on first login.</p>
+        <div id="rosterList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<dialog id="detailDlg">
+  <div class="row" style="justify-content:space-between; margin-bottom:10px">
+    <h2 id="dlgName" style="margin:0"></h2>
+    <button class="btn small" onclick="document.getElementById('detailDlg').close()">✕ Close</button>
+  </div>
+  <div id="dlgBody"></div>
+</dialog>
+
+<script src="config.js"></script>
+<script src="syllabus.js"></script>
+<script src="data-sa.js"></script>
+<script src="store.js"></script>
+<script src="marker.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const TOPIC_COLORS = {'Kinematics':'var(--m1)','Dynamics':'var(--m2)','Waves and Thermodynamics':'var(--m3)','Electricity and Magnetism':'var(--m4)','Working Scientifically':'var(--ws)'};
+let students = [], roster = [], responses = [], classMap = {}, studentFilter = 'all', rosterFilter = 'all', markFilter = 'all';
+const CLS = () => Store.classList();
+// Single-class build: no class grouping.
+function classOf(){ return null; }
+
+const cloud = Store.init();
+if (!cloud) $('localBanner').style.display = 'block';
+if (typeof STUDENT_SITE_URL !== 'undefined' && STUDENT_SITE_URL) {
+  const sl = $('studentLink'); sl.href = STUDENT_SITE_URL; sl.style.display = 'inline-block';
+}
+if (sessionStorage.getItem('pbsq_teacher') === '1') enter();
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+function login(){
+  if ($('pw').value === TEACHER_PASSWORD) { sessionStorage.setItem('pbsq_teacher','1'); enter(); }
+  else $('pwErr').style.display = 'block';
+}
+function enter(){ $('scr-login').style.display='none'; $('scr-dash').style.display='block'; load(); }
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x => x.classList.remove('on'));
+  t.classList.add('on'); $('pane-' + t.dataset.p).classList.add('on');
+}));
+
+async function load(){
+  students = await Store.getAllStudents();
+  classMap = await Store.getClassMap();
+  responses = await Store.getAllResponses();
+  const removed = await Store.getRemoved();
+  roster = (await Store.getRoster()).filter(n => !removed.includes(n));
+  renderOverview(); renderStudents(); renderHeatmap(); renderBattle(); renderRoster(); renderMarking();
+}
+
+function filterBar(elId){ const el = $(elId); if (el) el.innerHTML = ''; }
+function inFilter(){ return true; }
+
+function acc(s){ return s.totals.answered ? s.totals.correct / s.totals.answered : null; }
+function pct(x){ return x === null ? '—' : Math.round(x*100) + '%'; }
+function heatCell(a){
+  if (a === null) return `<span class="heat" style="background:#eef0f8; color:#aab">—</span>`;
+  const bg = a >= .75 ? '#d9f2e5' : a >= .5 ? '#fdf3d7' : '#fdeaee';
+  const fg = a >= .75 ? 'var(--good)' : a >= .5 ? '#9a7b12' : 'var(--bad)';
+  return `<span class="heat" style="background:${bg}; color:${fg}">${Math.round(a*100)}%</span>`;
+}
+function fmtDate(ts){ return new Date(ts).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) + ' ' + new Date(ts).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}); }
+function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+function modeLabel(a){
+  switch (a.mode) {
+    case 'shortanswer': return '✍️ Short answer';
+    case 'mistakes':    return '🔁 Mistakes';
+    case 'daily':       return '📆 Daily';
+    case 'survival':    return '💀 Survival';
+    case 'exam':        return '📄 Exam sim';
+    case 'duel':        return '🥊 Duel';
+    case 'matching':    return '🔗 Matching';
+    case 'flashcards':  return '🎴 Flashcards';
+    case 'defquiz':     return '📖 Definitions';
+    case 'chains':      return '⛓️ Chains';
+    case 'diagrams':    return '📐 Diagrams';
+    case 'syllabus':    return '🧠 Syllabus' + (a.game ? ' · ' + ({match:'Belongs',fill:'Fill sub',odd:'Odd one',cloze:'Gap'}[a.game] || a.game) : '');
+    default:            return (a.timed ? '⏱ ' : '') + 'Quiz';
+  }
+}
+function scoreLabel(a){
+  if (a.mode === 'survival') return `<b>${a.runLength ?? a.c}</b> in a row`;
+  const unit = a.mode === 'shortanswer' ? ' of marks'
+             : a.mode === 'matching' || a.mode === 'diagrams' ? ' first try'
+             : a.mode === 'flashcards' ? ' self-rated'
+             : a.mode === 'chains' ? ' clean'
+             : a.mode === 'syllabus' ? ' rounds' : '';
+  return `<b>${a.c}/${a.n}</b> (${a.n ? Math.round(a.c/a.n*100) : 0}%${unit})`;
+}
+
+function renderOverview(){
+  const active = students.filter(s => s.attempts.length);
+  const totQ = active.reduce((a,s) => a + s.totals.answered, 0);
+  const totC = active.reduce((a,s) => a + s.totals.correct, 0);
+  const totQuizzes = active.reduce((a,s) => a + s.attempts.length, 0);
+  const awaiting = responses.filter(r => r.status !== 'marked').length;
+  $('classStats').innerHTML =
+    st(roster.length, 'On class list') + st(active.length, 'Have played') +
+    st(totQuizzes, 'Quizzes done') + st(totQ, 'Questions answered') +
+    st(totQ ? Math.round(totC/totQ*100) + '%' : '—', 'Class accuracy') +
+    st(awaiting ? `<span style="color:var(--bad)">${awaiting}</span>` : '0', 'Awaiting marking');
+  // topic accuracy
+  let th = '';
+  for (const topic of Object.keys(SYLLABUS)) {
+    let c = 0, t = 0;
+    active.forEach(s => { const p = s.totals.perTopic[topic]; if (p) { c += p[0]; t += p[1]; } });
+    const p = t ? c/t*100 : 0;
+    th += `<div class="topicrow"><span style="width:130px; font-size:.87rem">${topic}</span><div class="tbar"><div style="width:${p}%; background:${TOPIC_COLORS[topic]}"></div></div><span class="muted" style="width:90px; text-align:right">${t ? Math.round(p) + '% (' + c + '/' + t + ')' : 'no data'}</span></div>`;
+  }
+  $('classTopics').innerHTML = th || '<p class="muted">No data yet.</p>';
+  // weakest subtopics
+  const agg = {};
+  active.forEach(s => { for (const [k,v] of Object.entries(s.totals.perSub)) { const a = agg[k] = agg[k] || [0,0]; a[0]+=v[0]; a[1]+=v[1]; } });
+  const weak = Object.entries(agg).filter(([,v]) => v[1] >= 5)
+    .map(([k,v]) => ({k, a: v[0]/v[1], v})).sort((x,y) => x.a - y.a).slice(0,8);
+  $('classWeak').innerHTML = weak.length ? weak.map(w => {
+    const [topic, sub] = w.k.split('|');
+    return `<div class="topicrow"><span style="width:260px; font-size:.85rem">${sub} <span class="muted">(${topic})</span></span><div class="tbar"><div style="width:${w.a*100}%; background:${w.a<.5?'var(--bad)':w.a<.75?'var(--gold)':'var(--good)'}"></div></div><span class="muted" style="width:60px; text-align:right">${w.v[0]}/${w.v[1]}</span></div>`;
+  }).join('') : '<p class="muted">Not enough data yet — needs 5+ class attempts per area.</p>';
+  // recent activity
+  const recent = active.flatMap(s => s.attempts.map(a => ({name: s.name, ...a})))
+    .sort((a,b) => b.d - a.d).slice(0,10);
+  $('recent').innerHTML = recent.length ? '<table><tr><th>When</th><th>Student</th><th>Mode</th><th>Score</th><th>Time</th></tr>' +
+    recent.map(r => `<tr><td>${fmtDate(r.d)}</td><td>${r.name}</td><td>${modeLabel(r)}</td><td>${scoreLabel(r)}</td><td>${Math.round(r.timeSec/60)}m</td></tr>`).join('') + '</table>'
+    : '<p class="muted">No quizzes played yet.</p>';
+  function st(v,l){ return `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`; }
+}
+
+let sortKey = 'xp', sortDir = -1;
+function renderStudents(){
+  filterBar('studentFilter', studentFilter, 'setStudentFilter');
+  const active = students.filter(s => s.attempts.length && inFilter(s.name, studentFilter));
+  const rows = active.map(s => ({
+    name: s.name, quizzes: s.attempts.length, answered: s.totals.answered,
+    acc: acc(s), xp: s.xp, last: s.attempts.length ? s.attempts[s.attempts.length-1].d : 0, _s: s
+  }));
+  rows.sort((a,b) => { const x = a[sortKey] ?? -1, y = b[sortKey] ?? -1; return x < y ? sortDir : x > y ? -sortDir : 0; });
+  $('studentTable').innerHTML = rows.length ? '<table><tr>' +
+    ['name','quizzes','answered','acc','xp','last'].map(k =>
+      `<th onclick="sortBy('${k}')">${{name:'Student',quizzes:'Quizzes',answered:'Questions',acc:'Accuracy',xp:'XP',last:'Last active'}[k]}${sortKey===k ? (sortDir===1?' ▼':' ▲') : ''}</th>`).join('') + '</tr>' +
+    rows.map((r,i) => `<tr style="cursor:pointer" onclick="showDetail(${i})">
+      <td><b>${r.name}</b></td><td>${r.quizzes}</td><td>${r.answered}</td>
+      <td>${heatCell(r.acc)}</td><td>${r.xp}</td><td class="muted">${r.last ? fmtDate(r.last) : '—'}</td></tr>`).join('') + '</table>'
+    : '<p class="muted">No students have played yet.</p>';
+  window._rows = rows;
+}
+function sortBy(k){ if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = -1; } renderStudents(); }
+function setStudentFilter(v){ studentFilter = v; renderStudents(); }
+
+// ================= MARKING =================
+const SA_BY_ID = Object.fromEntries((typeof SA_QUESTIONS !== 'undefined' ? SA_QUESTIONS : []).map(q => [q.id, q]));
+// Question images live with the student site; resolve against it so they load here too.
+function qImgUrl(q){
+  if (!q) return '';
+  const base = (typeof STUDENT_SITE_URL !== 'undefined' && STUDENT_SITE_URL) ? STUDENT_SITE_URL.replace(/\/?$/, '/') : '';
+  return base + q.img;
+}
+const draftMarks = {};   // responseId -> mark the teacher has clicked but not yet approved
+
+function renderMarking(){
+  const pending = responses.filter(r => r.status !== 'marked' && inFilter(r.student, markFilter))
+    .sort((a,b) => a.submitted - b.submitted);          // oldest first — fairest to students
+  const marked = responses.filter(r => r.status === 'marked' && inFilter(r.student, markFilter))
+    .sort((a,b) => b.markedAt - a.markedAt);
+
+  const allPending = responses.filter(r => r.status !== 'marked').length;
+  const chip = $('markCount');
+  if (allPending) { chip.style.display = 'inline-block'; chip.textContent = allPending; }
+  else chip.style.display = 'none';
+
+  filterBar('markingFilter', markFilter, 'setMarkFilter');
+  $('markingIntro').textContent = allPending
+    ? allPending + ' answer' + (allPending===1?'':'s') + ' waiting to be marked. Students see nothing until you approve a mark.'
+    : 'Nothing waiting — you\'re all caught up.';
+
+  $('markingQueue').innerHTML = pending.length ? pending.map(r => markItemHtml(r)).join('')
+    : '<p class="muted">Nothing in this filter.</p>';
+
+  $('markedList').innerHTML = marked.length ? marked.slice(0,40).map(r => {
+    const peers = Object.values(r.peers || {});
+    const spread = peers.length
+      ? '<span class="spread">' + peers.map(p => `<span title="${Math.abs(p.mark-r.mark)} out">${p.mark}</span>`).join('') + '</span>'
+      : '<span class="muted">no peer marks</span>';
+    const off = peers.filter(p => Math.abs(p.mark - r.mark) >= 2).length;
+    return `<details class="rev"><summary style="cursor:pointer; padding:8px 0">
+        <b>${r.student}</b> <span class="muted">· ${r.label} ·</span> <b>${r.mark}/${r.max}</b>
+        &nbsp; peers: ${spread} ${off ? `<span class="pill" style="background:#fdeaee; color:var(--bad)">${off} way off</span>` : ''}
+      </summary>
+      <div style="padding:10px 0 4px"><b>Their answer</b><div class="answerbox" style="margin-top:6px">${esc(r.typed)}</div></div>
+      ${r.feedback ? `<div style="margin-top:8px"><b>Your feedback</b><div class="muted" style="margin-top:4px">${esc(r.feedback)}</div></div>` : ''}
+      <div class="row" style="margin-top:10px"><button class="btn small" onclick="reopenResponse('${r.id}')">Re-mark</button></div>
+    </details>`;
+  }).join('') : '<p class="muted">Nothing marked yet.</p>';
+}
+function setMarkFilter(v){ markFilter = v; renderMarking(); }
+
+function markItemHtml(r){
+  const q = SA_BY_ID[r.qid];
+  const draft = draftMarks[r.id];
+  const ai = r.ai;
+  const chosen = draft !== undefined ? draft : (ai ? ai.mark : undefined);
+  const btns = Array.from({length: r.max + 1}, (_, m) =>
+    `<button class="btn small ${chosen === m ? 'sel' : ''}" onclick="pickMark('${r.id}',${m})">${m}</button>`).join('');
+  return `<div class="markitem" id="mi-${r.id}">
+    <div class="row" style="justify-content:space-between">
+      <div><b>${r.student}</b> <span class="muted">${classOf(r.student) ? '· ' + classOf(r.student) : ''}</span></div>
+      <div class="muted">${r.label} · ${r.topic} · <b>${r.max} marks</b> · handed in ${fmtDate(r.submitted)}</div>
+    </div>
+    ${q ? `<details class="rev"><summary class="muted" style="cursor:pointer; margin-top:8px">Show the question</summary>
+        <img class="qthumb" src="${qImgUrl(q)}" alt="${r.label}" loading="lazy"></details>` : ''}
+    <div style="margin-top:10px"><b>Their answer</b>
+      <div class="answerbox" style="margin-top:6px">${esc(r.typed)}</div></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn small" onclick="copyForMarking('${r.id}')">📋 Copy for marking</button>
+      ${Marker.enabled() && !ai ? `<button class="btn small" onclick="aiSuggest('${r.id}')">🤖 Get AI suggestion</button>` : ''}
+    </div>
+    ${ai ? `<div class="aibox">
+        <div class="ai-h">🤖 AI suggestion — ${ai.mark}/${r.max} · you decide</div>
+        <div>${esc(ai.feedback || '')}</div>
+        ${(ai.strengths||[]).length ? `<div style="margin-top:6px"><b style="color:var(--good)">✓</b> ${ai.strengths.map(esc).join(' · ')}</div>` : ''}
+        ${(ai.improvements||[]).length ? `<div style="margin-top:4px"><b style="color:var(--gold)">↑</b> ${ai.improvements.map(esc).join(' · ')}</div>` : ''}
+      </div>` : ''}
+    ${q ? `<details class="rev" style="margin-top:10px"><summary>NESA marking criteria</summary><pre>${esc(q.criteria)}</pre></details>
+           ${q.sample ? `<details class="rev"><summary>Sample answer</summary><pre>${esc(q.sample)}</pre></details>` : ''}` : ''}
+    <div style="margin-top:12px"><b>Your mark</b><div class="markbtns">${btns}</div></div>
+    <textarea id="fb-${r.id}" rows="2" placeholder="Feedback for the student (optional)" style="margin-top:10px">${esc(r.feedback || (ai ? ai.feedback : '') || '')}</textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" onclick="approveMark('${r.id}')">Approve & release mark</button>
+      <span class="muted" id="ms-${r.id}"></span>
+    </div>
+  </div>`;
+}
+
+function pickMark(id, m){
+  draftMarks[id] = m;
+  const el = $('mi-' + id);
+  if (el) el.querySelectorAll('.markbtns .btn').forEach((b,i) => b.classList.toggle('sel', i === m));
+}
+
+// ---------- copy a response out for marking in Cowork ----------
+const MARK_PROMPT =
+`Mark this student's Preliminary Physics short answer using the official NESA marking guidelines that relate to this question. Be critical in your marking — apply the guidelines the way a real NESA marker would, not generously. Award a whole number of marks out of the maximum.
+
+Give me:
+1. The mark, as a number out of the maximum.
+2. If it is not full marks, short feedback (2-3 sentences) telling the student what cost them marks and what would have earned more. If it is full marks, no feedback is needed.`;
+
+function markingBlock(r){
+  const q = SA_BY_ID[r.qid];
+  const parts = [MARK_PROMPT, '',
+    '--- QUESTION ---',
+    `${r.year} Preliminary Physics — Question ${r.qn}${r.part ? '(' + r.part + ')' : ''}`,
+    `Worth ${r.max} mark${r.max === 1 ? '' : 's'} · Topic: ${r.topic}`];
+  if (q && q.criteria) parts.push('', 'OFFICIAL NESA MARKING GUIDELINES:', q.criteria);
+  if (q && q.sample)   parts.push('', 'NESA SAMPLE ANSWER (guide to the expected standard):', q.sample);
+  parts.push('', "--- STUDENT'S ANSWER ---", r.typed, '', `--- END --- (mark out of ${r.max})`);
+  return parts.join('\n');
+}
+
+async function copyText(text, statusEl){
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch(e){
+    // file:// and older browsers block the async clipboard — fall back
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch(e2){}
+    document.body.removeChild(ta);
+    if (!ok) { if (statusEl) statusEl.textContent = 'Copy blocked — select the answer text manually.'; return false; }
+  }
+  if (statusEl) { statusEl.textContent = '✓ Copied — paste it into Cowork'; setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 4000); }
+  return true;
+}
+
+function copyForMarking(id){
+  const r = responses.find(x => x.id === id);
+  if (!r) return;
+  copyText(markingBlock(r), $('ms-' + id));
+}
+
+function copyAllPending(){
+  const pending = responses.filter(r => r.status !== 'marked' && inFilter(r.student, markFilter))
+    .sort((a,b) => a.submitted - b.submitted);
+  if (!pending.length) return;
+  const blocks = pending.map((r,i) =>
+    `=========== ANSWER ${i+1} of ${pending.length} — ${r.student} (${r.label}) ===========\n\n` +
+    markingBlock(r).replace(MARK_PROMPT + '\n\n', ''));
+  const text = MARK_PROMPT.replace("Mark this student's", "Mark each of these students'")
+      .replace('this question', 'each question')
+      + `\n\nThere are ${pending.length} answers below. Give me the mark and feedback for each one, labelled with the student's name.\n\n`
+      + blocks.join('\n\n');
+  copyText(text, $('copyAllStatus'));
+}
+
+async function aiSuggest(id){
+  const r = responses.find(x => x.id === id);
+  const q = SA_BY_ID[r.qid];
+  if (!r || !q) return;
+  $('ms-' + id).textContent = 'Asking the AI…';
+  const res = await Marker.mark(q, {typed: r.typed});
+  if (!res.ok) { $('ms-' + id).textContent = res.err; return; }
+  const ai = {mark: res.mark, feedback: res.feedback, strengths: res.strengths || [], improvements: res.improvements || []};
+  await Store.setResponseAI(id, ai);
+  r.ai = ai;
+  renderMarking();
+}
+
+async function approveMark(id){
+  const r = responses.find(x => x.id === id);
+  if (!r) return;
+  const mark = draftMarks[id] !== undefined ? draftMarks[id] : (r.ai ? r.ai.mark : undefined);
+  if (mark === undefined) { $('ms-' + id).textContent = 'Pick a mark first.'; return; }
+  const feedback = ($('fb-' + id) || {}).value || '';
+  $('ms-' + id).textContent = 'Saving…';
+
+  await Store.setResponseMark(id, mark, feedback);
+  Object.assign(r, {mark, feedback, status: 'marked', markedAt: Date.now()});
+
+  // credit the student — this is where short-answer marks enter their totals
+  const student = await Store.getStudent(r.student);
+  if (student) {
+    const res = applyTeacherMark(student, r, mark, 0);
+    if (res) await Store.saveStudent(r.student, student);
+  }
+  delete draftMarks[id];
+  await load();
+  document.querySelector('.tab[data-p="marking"]').click();
+}
+
+async function reopenResponse(id){
+  if (!confirm("Re-mark this answer? It goes back into the queue. When you approve a new mark, the student's totals are adjusted by the difference — nothing is double-counted.")) return;
+  const r = responses.find(x => x.id === id);
+  if (!r) return;
+  await Store.reopenResponse(id);
+  r.status = 'pending';
+  draftMarks[id] = r.mark;
+  renderMarking();
+}
+
+// ---------- class battle removed (single-class build) ----------
+function renderBattle(){ /* no-op: single class */ }
+
+function showDetail(i){
+  const s = window._rows[i]._s;
+  $('dlgName').textContent = s.name;
+  let html = `<p class="muted">Level ${levelFromXp(s.xp)} · ${s.xp} XP · best streak ${s.bestStreak} · ${s.badges.length} badges · ${s.wrong.length} questions currently wrong</p>`;
+  if (s.sa && s.sa.marksTotal) html += `<p class="muted">✍️ Short answers: ${s.sa.count} marked · ${s.sa.marks}/${s.sa.marksTotal} marks (${Math.round(s.sa.marks/s.sa.marksTotal*100)}%)</p>`;
+  html += '<h2 style="margin-top:14px">Topic accuracy</h2>';
+  for (const topic of Object.keys(SYLLABUS)) {
+    const p = s.totals.perTopic[topic];
+    html += `<div class="topicrow"><span style="width:130px; font-size:.85rem">${topic}</span>${heatCell(p && p[1] ? p[0]/p[1] : null)}<span class="muted">${p ? p[0] + '/' + p[1] : ''}</span></div>`;
+  }
+  const weak = Object.entries(s.totals.perSub).filter(([,v]) => v[1] >= 2)
+    .map(([k,v]) => ({k, a: v[0]/v[1], v})).sort((x,y) => x.a - y.a).slice(0,5);
+  if (weak.length) {
+    html += '<h2 style="margin-top:14px">Weakest areas</h2>' + weak.map(w => {
+      const [topic, sub] = w.k.split('|');
+      return `<div class="topicrow"><span style="width:250px; font-size:.83rem">${sub} <span class="muted">(${topic})</span></span>${heatCell(w.a)}<span class="muted">${w.v[0]}/${w.v[1]}</span></div>`;
+    }).join('');
+  }
+  // ---- earned badges ----
+  const earned = BADGES.filter(b => s.badges.includes(b.id));
+  html += `<h2 style="margin-top:16px">Badges earned <span class="muted" style="font-weight:400">${earned.length} of ${BADGES.length}</span></h2>`;
+  html += earned.length
+    ? '<div class="badgegrid">' + earned.map(b =>
+        `<div class="badge" title="${b.desc}"><div class="be">${b.emoji}</div><div class="bn">${b.name}</div><div class="bd">${b.desc}</div></div>`).join('') + '</div>'
+    : '<p class="muted">No badges yet.</p>';
+
+  // ---- game mode summary ----
+  const bits = [];
+  if (s.daily) bits.push(`📆 Daily: best ${s.daily.best}/5 · 🔥 ${s.daily.streak} day streak (last played ${s.daily.date})`);
+  if (s.survival && s.survival.best) bits.push(`💀 Survival: best run ${s.survival.best} · ${s.survival.runs} run${s.survival.runs===1?'':'s'}`);
+  if (s.exams && s.exams.length) {
+    const best = s.exams.reduce((a,e) => e.pct > a.pct ? e : a);
+    bits.push(`📄 Exams: ${s.exams.length} sat · best ${best.c}/${best.n} (${best.pct}%, ${bandFromPct(best.pct).band})`);
+  }
+  if (s.duels && (s.duels.w + s.duels.l + s.duels.d)) bits.push(`🥊 Duels: ${s.duels.w}W–${s.duels.l}L–${s.duels.d}D`);
+  if (bits.length) html += '<h2 style="margin-top:16px">Game modes</h2>' + bits.map(b => `<p class="muted" style="margin:4px 0">${b}</p>`).join('');
+
+  html += '<h2 style="margin-top:14px">Quiz history</h2><table><tr><th>When</th><th>Mode</th><th>Score</th><th>Time</th></tr>' +
+    [...s.attempts].reverse().slice(0,15).map(a =>
+      `<tr><td>${fmtDate(a.d)}</td><td>${modeLabel(a)}</td><td>${scoreLabel(a)}</td><td>${Math.round(a.timeSec/60)}m</td></tr>`).join('') + '</table>';
+  html += `<div class="row" style="margin-top:16px">
+    <button class="btn" onclick="resetPin('${s.name.replace(/'/g,"\\'")}')">Reset PIN</button>
+    <button class="btn danger" onclick="wipeStudent('${s.name.replace(/'/g,"\\'")}')">Delete results</button></div>`;
+  $('dlgBody').innerHTML = html;
+  $('detailDlg').showModal();
+}
+async function resetPin(name){
+  if (!confirm(`Reset ${name}'s PIN? They'll create a new one on next login.`)) return;
+  const s = await Store.getStudent(name); if (!s) return;
+  s.pin = null; await Store.saveStudent(name, s);
+  alert('PIN reset.');
+}
+async function wipeStudent(name){
+  if (!confirm(`Delete ALL results for ${name}? This cannot be undone.`)) return;
+  await Store.deleteStudent(name);
+  $('detailDlg').close(); load();
+}
+
+function renderHeatmap(){
+  const active = students.filter(s => s.attempts.length);
+  if (!active.length) { $('heatmap').innerHTML = '<p class="muted">No data yet.</p>'; return; }
+  const topics = Object.keys(SYLLABUS);
+  let html = '<table><tr><th>Student</th>' + topics.map(t => `<th>${t}</th>`).join('') + '<th>Overall</th></tr>';
+  active.sort((a,b) => a.name.localeCompare(b.name)).forEach(s => {
+    html += `<tr><td><b>${s.name}</b></td>` + topics.map(t => {
+      const p = s.totals.perTopic[t];
+      return '<td>' + heatCell(p && p[1] ? p[0]/p[1] : null) + '</td>';
+    }).join('') + '<td>' + heatCell(acc(s)) + '</td></tr>';
+  });
+  $('heatmap').innerHTML = html + '</table>';
+}
+
+function renderRoster(){
+  const list = roster.slice();
+  $('rosterList').innerHTML = list.length ? '<table>' + list.map(n => {
+    const played = students.some(s => s.name === n && s.attempts.length);
+    const esc = n.replace(/'/g,"\\'");
+    return `<tr><td><b>${n}</b> ${played ? '<span class="pill" style="background:#d9f2e5; color:var(--good)">active</span>' : '<span class="pill" style="background:#eef0f8; color:#99a">not yet played</span>'}</td>
+      <td style="text-align:right; width:110px"><button class="btn small danger" onclick="removeName('${esc}')">Remove</button></td></tr>`;
+  }).join('') + '</table>' : '<p class="muted">Nobody here yet — add names above.</p>';
+}
+
+async function addNames(){
+  const names = $('newNames').value.split('\n').map(n => n.trim()).filter(Boolean);
+  if (!names.length) return;
+  await Store.saveRoster([...roster, ...names]);
+  $('newNames').value = '';
+  load();
+}
+async function removeName(name){
+  if (!confirm(`Remove ${name} from the class list? (Their results are kept unless you delete them.)`)) return;
+  await Store.removeFromRoster(name);
+  load();
+}
+</script>
+</body>
+</html>
