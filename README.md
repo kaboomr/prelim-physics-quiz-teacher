@@ -32,13 +32,14 @@ If the repository is public, treat the dashboard URL itself as the secret:
 | `data-sa.js` | Short-answer questions, criteria and sample answers (must match the student game) |
 | `store.js` | Firebase/localStorage data layer, XP, badges |
 | `marker.js` | AI marking assistant |
-| `IND21_q*.png` | Short-answer question images (must match the student game) |
+| `IND21_q*.png`, `P22_q*.png`, `P22_q*.svg` | Short-answer question images (must match the student game) |
 
-**On the question bank:** `data-sa.js` holds 26 Section II sub-questions from the 2021
-NSW Independent Trial Exams, Physics Year 11 Examination, with official marking criteria
-and sample answers — see the student game's README for sourcing details. Whenever
-`data-sa.js` there is updated with more past-paper questions, copy the same file (and
-matching images) here so marking criteria stay in sync between the two sites.
+**On the question bank:** `data-sa.js` holds 44 Section II sub-questions from two real
+papers (2021 NSW Independent Trial Exams and 2022 NSW Independent Exams, both Physics
+Year 11), with official marking criteria and sample answers — see the student game's
+README for sourcing details. Whenever `data-sa.js` there is updated with more past-paper
+questions, copy the same file (and matching images) here so marking criteria stay in
+sync between the two sites.
 
 ## Notes
 
